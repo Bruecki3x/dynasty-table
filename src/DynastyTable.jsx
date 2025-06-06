@@ -14,19 +14,20 @@ function calculateAge(birthday) {
 }
 
 export default function DynastyTable() {
-  const [data, setData] = useState([]);
+  const [data, setData] = useState(initialData);
+  const [hydrated, setHydrated] = useState(false);
 
-  // Laden aus localStorage (nur im Browser)
+  // ✅ Nur im Browser ausführen
   useEffect(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("dynastyData");
       if (saved) {
         setData(JSON.parse(saved));
       }
+      setHydrated(true);
     }
   }, []);
 
-  // Speichern in localStorage (nur im Browser)
   useEffect(() => {
     if (typeof window !== "undefined") {
       localStorage.setItem("dynastyData", JSON.stringify(data));
@@ -61,15 +62,17 @@ export default function DynastyTable() {
   };
 
   const averageAge = () => {
-    const filtered = data.filter((p) => p.position !== "DEF");
+    const filtered = data.filter((player) => player.position !== "DEF");
     const sum = filtered.reduce(
-      (acc, p) => acc + calculateAge(p.birthday),
+      (acc, player) => acc + calculateAge(player.birthday),
       0
     );
     return filtered.length > 0
       ? (sum / filtered.length).toFixed(1)
       : "Keine Spieler";
   };
+
+  if (!hydrated) return null; // verhindert SSR Fehler
 
   return (
     <div className="p-4">
@@ -101,7 +104,6 @@ export default function DynastyTable() {
           {data.map((player, index) => {
             const age = calculateAge(player.birthday);
             const trend = player.currentValue - player.lastValue;
-
             const color = {
               QB: "bg-red-100",
               RB: "bg-green-100",
