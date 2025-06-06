@@ -15,44 +15,39 @@ function calculateAge(birthday) {
 
 export default function DynastyTable() {
   const [data, setData] = useState([]);
-  const [isClient, setIsClient] = useState(false); // ⬅️ wichtig
 
-  // ⬅️ Prüfen, ob wir im Browser sind
+  // ⛑ Daten beim ersten Render clientseitig laden
   useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  // ⬅️ Lade Daten aus localStorage (nur im Browser)
-  useEffect(() => {
-    if (typeof window !== "undefined" && isClient) {
+    if (typeof window !== "undefined") {
       const saved = localStorage.getItem("dynastyData");
       if (saved) {
-        setData(JSON.parse(saved));
+        try {
+          setData(JSON.parse(saved));
+        } catch (e) {
+          console.error("Fehler beim Parsen von localStorage:", e);
+        }
       } else {
         setData(initialData);
       }
     }
-  }, [isClient]);
+  }, []);
 
-  // ⬅️ Speichern bei jeder Änderung (nur im Browser)
+  // 💾 Automatisch speichern
   useEffect(() => {
-    if (typeof window !== "undefined" && isClient) {
+    if (typeof window !== "undefined") {
       localStorage.setItem("dynastyData", JSON.stringify(data));
     }
-  }, [data, isClient]);
+  }, [data]);
 
   const handleChange = (index, field, value) => {
     const updated = [...data];
     updated[index][field] =
-      field === "currentValue" || field === "lastValue"
-        ? Number(value)
-        : value;
+      field === "currentValue" || field === "lastValue" ? Number(value) : value;
     setData(updated);
   };
 
   const handleAdd = () => {
     if (data.length >= 23) return;
-
     setData([
       ...data,
       {
@@ -70,9 +65,9 @@ export default function DynastyTable() {
   };
 
   const averageAge = () => {
-    const filtered = data.filter((player) => player.position !== "DEF");
+    const filtered = data.filter((p) => p.position !== "DEF");
     const sum = filtered.reduce(
-      (acc, player) => acc + calculateAge(player.birthday),
+      (acc, p) => acc + calculateAge(p.birthday),
       0
     );
     return filtered.length > 0
@@ -92,6 +87,7 @@ export default function DynastyTable() {
       >
         + Spieler hinzufügen
       </button>
+
       <table className="w-full table-auto border border-collapse border-gray-300 text-sm">
         <thead>
           <tr className="bg-gray-200">
@@ -110,7 +106,6 @@ export default function DynastyTable() {
           {data.map((player, index) => {
             const age = calculateAge(player.birthday);
             const trend = player.currentValue - player.lastValue;
-
             const color = {
               QB: "bg-red-100",
               RB: "bg-green-100",
@@ -192,6 +187,7 @@ export default function DynastyTable() {
           })}
         </tbody>
       </table>
+
       <p className="text-right text-xs mt-2 text-gray-500">
         {data.length}/23 Spieler
       </p>
