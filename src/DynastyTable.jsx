@@ -58,9 +58,26 @@ export default function DynastyTable() {
     setData(data.filter((_, i) => i !== index));
   };
 
+  const averageAge = () => {
+    const filtered = data.filter((p) => p.position !== "DEF");
+    const sum = filtered.reduce(
+      (acc, player) => acc + calculateAge(player.birthday),
+      0
+    );
+    return filtered.length > 0
+      ? (sum / filtered.length).toFixed(1)
+      : "Keine Spieler";
+  };
+
   const handleSort = (key) => {
-    let sorted = [...data];
-    sorted.sort((a, b) => {
+    if (sortKey === key) {
+      setSortAsc(!sortAsc);
+    } else {
+      setSortKey(key);
+      setSortAsc(true);
+    }
+
+    const sorted = [...data].sort((a, b) => {
       let aVal, bVal;
 
       if (key === "birthday") {
@@ -69,9 +86,6 @@ export default function DynastyTable() {
       } else if (key === "trend") {
         aVal = a.currentValue - a.lastValue;
         bVal = b.currentValue - b.lastValue;
-      } else if (key === "name" || key === "position") {
-        aVal = a[key].toLowerCase();
-        bVal = b[key].toLowerCase();
       } else {
         aVal = a[key];
         bVal = b[key];
@@ -83,26 +97,9 @@ export default function DynastyTable() {
     });
 
     setData(sorted);
-    if (sortKey === key) {
-      setSortAsc(!sortAsc);
-    } else {
-      setSortKey(key);
-      setSortAsc(true);
-    }
   };
 
-  const averageAge = () => {
-    const filtered = data.filter((player) => player.position !== "DEF");
-    const sum = filtered.reduce(
-      (acc, player) => acc + calculateAge(player.birthday),
-      0
-    );
-    return filtered.length > 0
-      ? (sum / filtered.length).toFixed(1)
-      : "Keine Spieler";
-  };
-
-  const getSortArrow = (key) => {
+  const getSortIcon = (key) => {
     if (sortKey !== key) return "";
     return sortAsc ? "▲" : "▼";
   };
@@ -110,16 +107,12 @@ export default function DynastyTable() {
   return (
     <div className="p-4">
       <h2 className="text-2xl font-bold mb-2">🏈 Dynasty-Trade-Value</h2>
-      <p className="mb-2 text-sm">
+      <p className="mb-4">
         📊 Durchschnittsalter: <strong>{averageAge()} Jahre</strong>
-      </p>
-      <p className="mb-4 text-sm text-right">
-        👥 {data.length}/23 Spieler
       </p>
       <button
         onClick={handleAdd}
         className="mb-4 px-4 py-1 bg-green-600 text-white rounded"
-        disabled={data.length >= 23}
       >
         + Spieler hinzufügen
       </button>
@@ -127,13 +120,45 @@ export default function DynastyTable() {
         <thead>
           <tr className="bg-gray-200">
             <th>#</th>
-            <th onClick={() => handleSort("position")} className="cursor-pointer">Position {getSortArrow("position")}</th>
-            <th onClick={() => handleSort("name")} className="cursor-pointer">Spieler {getSortArrow("name")}</th>
-            <th onClick={() => handleSort("birthday")} className="cursor-pointer">Geburtstag {getSortArrow("birthday")}</th>
-            <th onClick={() => handleSort("birthday")} className="cursor-pointer">Alter {getSortArrow("birthday")}</th>
-            <th onClick={() => handleSort("lastValue")} className="cursor-pointer">Vormonat {getSortArrow("lastValue")}</th>
-            <th onClick={() => handleSort("currentValue")} className="cursor-pointer">Aktuell {getSortArrow("currentValue")}</th>
-            <th onClick={() => handleSort("trend")} className="cursor-pointer">Trend {getSortArrow("trend")}</th>
+            <th
+              onClick={() => handleSort("position")}
+              className="cursor-pointer"
+            >
+              Position {getSortIcon("position")}
+            </th>
+            <th onClick={() => handleSort("name")} className="cursor-pointer">
+              Spieler {getSortIcon("name")}
+            </th>
+            <th
+              onClick={() => handleSort("birthday")}
+              className="cursor-pointer"
+            >
+              Geburtstag {getSortIcon("birthday")}
+            </th>
+            <th
+              onClick={() => handleSort("age")}
+              className="cursor-pointer"
+            >
+              Alter {getSortIcon("age")}
+            </th>
+            <th
+              onClick={() => handleSort("lastValue")}
+              className="cursor-pointer"
+            >
+              Vormonat {getSortIcon("lastValue")}
+            </th>
+            <th
+              onClick={() => handleSort("currentValue")}
+              className="cursor-pointer"
+            >
+              Aktuell {getSortIcon("currentValue")}
+            </th>
+            <th
+              onClick={() => handleSort("trend")}
+              className="cursor-pointer"
+            >
+              Trend {getSortIcon("trend")}
+            </th>
             <th>Aktion</th>
           </tr>
         </thead>
@@ -147,6 +172,7 @@ export default function DynastyTable() {
               RB: "bg-green-100",
               WR: "bg-blue-100",
               TE: "bg-yellow-100",
+              K: "bg-purple-100",
               DEF: "bg-gray-100",
             }[player.position] || "";
 
@@ -161,7 +187,7 @@ export default function DynastyTable() {
                     }
                     className="w-full"
                   >
-                    {["QB", "RB", "WR", "TE", "DEF"].map((pos) => (
+                    {["QB", "RB", "WR", "TE", "K", "DEF"].map((pos) => (
                       <option key={pos} value={pos}>
                         {pos}
                       </option>
@@ -223,6 +249,9 @@ export default function DynastyTable() {
           })}
         </tbody>
       </table>
+      <p className="text-right text-xs mt-2 text-gray-500">
+        {data.length}/23 Spieler
+      </p>
     </div>
   );
 }
