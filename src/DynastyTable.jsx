@@ -14,17 +14,17 @@ function calculateAge(birthday) {
 }
 
 export default function DynastyTable() {
-  const [data, setData] = useState(initialData);
-  const [hydrated, setHydrated] = useState(false);
+  const [data, setData] = useState([]);
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
 
-  // ✅ Nur im Browser ausführen
   useEffect(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("dynastyData");
       if (saved) {
         setData(JSON.parse(saved));
+      } else {
+        setData(initialData);
       }
-      setHydrated(true);
     }
   }, []);
 
@@ -37,9 +37,7 @@ export default function DynastyTable() {
   const handleChange = (index, field, value) => {
     const updated = [...data];
     updated[index][field] =
-      field === "currentValue" || field === "lastValue"
-        ? Number(value)
-        : value;
+      field === "currentValue" || field === "lastValue" ? Number(value) : value;
     setData(updated);
   };
 
@@ -72,7 +70,33 @@ export default function DynastyTable() {
       : "Keine Spieler";
   };
 
-  if (!hydrated) return null; // verhindert SSR Fehler
+  const sortData = (key) => {
+    let direction = "asc";
+    if (sortConfig.key === key && sortConfig.direction === "asc") {
+      direction = "desc";
+    }
+    setSortConfig({ key, direction });
+
+    const sorted = [...data].sort((a, b) => {
+      let aVal = a[key];
+      let bVal = b[key];
+
+      if (key === "birthday") {
+        aVal = calculateAge(aVal);
+        bVal = calculateAge(bVal);
+      }
+
+      if (typeof aVal === "string") {
+        return direction === "asc"
+          ? aVal.localeCompare(bVal)
+          : bVal.localeCompare(aVal);
+      } else {
+        return direction === "asc" ? aVal - bVal : bVal - aVal;
+      }
+    });
+
+    setData(sorted);
+  };
 
   return (
     <div className="p-4">
@@ -90,13 +114,13 @@ export default function DynastyTable() {
         <thead>
           <tr className="bg-gray-200">
             <th>#</th>
-            <th>Position</th>
-            <th>Spieler</th>
-            <th>Geburtstag</th>
-            <th>Alter</th>
-            <th>Vormonat</th>
-            <th>Aktuell</th>
-            <th>Trend</th>
+            <th onClick={() => sortData("position")} className="cursor-pointer">Position</th>
+            <th onClick={() => sortData("name")} className="cursor-pointer">Spieler</th>
+            <th onClick={() => sortData("birthday")} className="cursor-pointer">Geburtstag</th>
+            <th onClick={() => sortData("birthday")} className="cursor-pointer">Alter</th>
+            <th onClick={() => sortData("lastValue")} className="cursor-pointer">Vormonat</th>
+            <th onClick={() => sortData("currentValue")} className="cursor-pointer">Aktuell</th>
+            <th onClick={() => sortData("trend")} className="cursor-pointer">Trend</th>
             <th>Aktion</th>
           </tr>
         </thead>
@@ -104,6 +128,7 @@ export default function DynastyTable() {
           {data.map((player, index) => {
             const age = calculateAge(player.birthday);
             const trend = player.currentValue - player.lastValue;
+
             const color = {
               QB: "bg-red-100",
               RB: "bg-green-100",
@@ -118,15 +143,11 @@ export default function DynastyTable() {
                 <td>
                   <select
                     value={player.position}
-                    onChange={(e) =>
-                      handleChange(index, "position", e.target.value)
-                    }
+                    onChange={(e) => handleChange(index, "position", e.target.value)}
                     className="w-full"
                   >
                     {["QB", "RB", "WR", "TE", "DEF"].map((pos) => (
-                      <option key={pos} value={pos}>
-                        {pos}
-                      </option>
+                      <option key={pos} value={pos}>{pos}</option>
                     ))}
                   </select>
                 </td>
@@ -134,9 +155,7 @@ export default function DynastyTable() {
                   <input
                     type="text"
                     value={player.name}
-                    onChange={(e) =>
-                      handleChange(index, "name", e.target.value)
-                    }
+                    onChange={(e) => handleChange(index, "name", e.target.value)}
                     className="w-full"
                   />
                 </td>
@@ -144,9 +163,7 @@ export default function DynastyTable() {
                   <input
                     type="date"
                     value={player.birthday}
-                    onChange={(e) =>
-                      handleChange(index, "birthday", e.target.value)
-                    }
+                    onChange={(e) => handleChange(index, "birthday", e.target.value)}
                     className="w-full"
                   />
                 </td>
@@ -155,9 +172,7 @@ export default function DynastyTable() {
                   <input
                     type="number"
                     value={player.lastValue}
-                    onChange={(e) =>
-                      handleChange(index, "lastValue", e.target.value)
-                    }
+                    onChange={(e) => handleChange(index, "lastValue", e.target.value)}
                     className="w-full"
                   />
                 </td>
@@ -165,9 +180,7 @@ export default function DynastyTable() {
                   <input
                     type="number"
                     value={player.currentValue}
-                    onChange={(e) =>
-                      handleChange(index, "currentValue", e.target.value)
-                    }
+                    onChange={(e) => handleChange(index, "currentValue", e.target.value)}
                     className="w-full"
                   />
                 </td>
