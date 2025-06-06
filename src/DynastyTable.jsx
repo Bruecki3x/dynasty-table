@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 
+const initialData = [];
+
 function calculateAge(birthday) {
   const birth = new Date(birthday);
   const today = new Date();
@@ -11,37 +13,25 @@ function calculateAge(birthday) {
   return age;
 }
 
-const defaultPlayer = {
-  position: "QB",
-  name: "",
-  birthday: "2000-01-01",
-  lastValue: 0,
-  currentValue: 0,
-};
-
 export default function DynastyTable() {
   const [data, setData] = useState([]);
-  const [isClient, setIsClient] = useState(false); // 🧠 zeigt an, ob Browser verfügbar ist
 
+  // Laden aus localStorage (nur im Browser)
   useEffect(() => {
     if (typeof window !== "undefined") {
-      setIsClient(true);
-      const stored = localStorage.getItem("dynastyData");
-      if (stored) {
-        try {
-          setData(JSON.parse(stored));
-        } catch (err) {
-          console.error("Fehler beim Parsen:", err);
-        }
+      const saved = localStorage.getItem("dynastyData");
+      if (saved) {
+        setData(JSON.parse(saved));
       }
     }
   }, []);
 
+  // Speichern in localStorage (nur im Browser)
   useEffect(() => {
-    if (isClient) {
+    if (typeof window !== "undefined") {
       localStorage.setItem("dynastyData", JSON.stringify(data));
     }
-  }, [data, isClient]);
+  }, [data]);
 
   const handleChange = (index, field, value) => {
     const updated = [...data];
@@ -54,7 +44,16 @@ export default function DynastyTable() {
 
   const handleAdd = () => {
     if (data.length >= 23) return;
-    setData([...data, { ...defaultPlayer }]);
+    setData([
+      ...data,
+      {
+        position: "QB",
+        name: "",
+        birthday: "2000-01-01",
+        lastValue: 0,
+        currentValue: 0,
+      },
+    ]);
   };
 
   const handleDelete = (index) => {
@@ -62,21 +61,22 @@ export default function DynastyTable() {
   };
 
   const averageAge = () => {
-    const relevant = data.filter((p) => p.position !== "DEF");
-    const sum = relevant.reduce((acc, p) => acc + calculateAge(p.birthday), 0);
-    return relevant.length > 0
-      ? (sum / relevant.length).toFixed(1)
+    const filtered = data.filter((p) => p.position !== "DEF");
+    const sum = filtered.reduce(
+      (acc, p) => acc + calculateAge(p.birthday),
+      0
+    );
+    return filtered.length > 0
+      ? (sum / filtered.length).toFixed(1)
       : "Keine Spieler";
   };
-
-  if (!isClient) {
-    return <p>Lade Daten...</p>; // 🚀 blockiert das Rendern, bis Browser bereit
-  }
 
   return (
     <div className="p-4">
       <h2 className="text-2xl font-bold mb-2">🏈 Dynasty-Trade-Value</h2>
-      <p className="mb-4">📊 Durchschnittsalter: <strong>{averageAge()} Jahre</strong></p>
+      <p className="mb-4">
+        📊 Durchschnittsalter: <strong>{averageAge()} Jahre</strong>
+      </p>
       <button
         onClick={handleAdd}
         className="mb-4 px-4 py-1 bg-green-600 text-white rounded"
@@ -101,6 +101,7 @@ export default function DynastyTable() {
           {data.map((player, index) => {
             const age = calculateAge(player.birthday);
             const trend = player.currentValue - player.lastValue;
+
             const color = {
               QB: "bg-red-100",
               RB: "bg-green-100",
