@@ -1,6 +1,4 @@
-import React, { useState, useEffect } from "react";
-
-const MAX_PLAYERS = 23;
+import React, { useState, useEffect, useRef } from "react";
 
 const initialData = [
   { position: "WR", name: "Ja'Marr Chase", birthday: "2000-03-01", lastValue: 93, currentValue: 93 },
@@ -8,18 +6,7 @@ const initialData = [
   { position: "TE", name: "Trey McBride", birthday: "1999-11-22", lastValue: 58, currentValue: 58 },
 ];
 
-const positionColors = {
-  QB: "bg-red-100",
-  RB: "bg-green-100",
-  WR: "bg-blue-100",
-  TE: "bg-yellow-100",
-  K: "bg-purple-100",
-  DEF: "bg-gray-200",
-};
-
-const positionOptions = ["QB", "RB", "WR", "TE", "K", "DEF"];
-
-function calculateAge(birthday) {
+const calculateAge = (birthday) => {
   const birth = new Date(birthday);
   const today = new Date();
   let age = today.getFullYear() - birth.getFullYear();
@@ -28,21 +15,16 @@ function calculateAge(birthday) {
     age--;
   }
   return age;
-}
-
-function averageAge(players) {
-  const ages = players
-    .filter(p => p.position !== "DEF" && p.birthday)
-    .map(p => calculateAge(p.birthday));
-  if (ages.length === 0) return "-";
-  const avg = ages.reduce((a, b) => a + b, 0) / ages.length;
-  return avg.toFixed(1);
-}
+};
 
 export default function DynastyTable() {
-  const [data, setData] = useState(initialData);
+  const [data, setData] = useState(() => {
+    const stored = localStorage.getItem("dynastyData");
+    return stored ? JSON.parse(stored) : initialData;
+  });
   const [sortKey, setSortKey] = useState(null);
   const [sortAsc, setSortAsc] = useState(true);
+  const fileInputRef = useRef();
 
   useEffect(() => {
     localStorage.setItem("dynastyData", JSON.stringify(data));
@@ -55,7 +37,7 @@ export default function DynastyTable() {
   };
 
   const handleAdd = () => {
-    if (data.length >= MAX_PLAYERS) return;
+    if (data.length >= 23) return;
     setData([
       ...data,
       { position: "QB", name: "", birthday: "2000-01-01", lastValue: 0, currentValue: 0 },
@@ -75,12 +57,10 @@ export default function DynastyTable() {
     }
   };
 
-  const handleExport = () => {
-    const csvContent = [
-      ["position", "name", "birthday", "lastValue", "currentValue"],
-      ...data.map(p => [p.position, p.name, p.birthday, p.lastValue, p.currentValue])
-    ].map(e => e.join(",")).join("\n");
-
+  const exportToCSV = () => {
+    const headers = ["Position", "Name", "Geburtstag", "Vormonat", "Aktuell"];
+    const rows = data.map(row => [row.position, row.name, row.birthday, row.lastValue, row.currentValue]);
+    const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -89,127 +69,169 @@ export default function DynastyTable() {
     link.click();
   };
 
-  const handleImport = (e) => {
-    const file = e.target.files[0];
+  const importFromCSV = (event) => {
+    const file = event.target.files[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (e) => {
-      const text = e.target.result;
-      const rows = text.trim().split("\n").slice(1); // remove header
-      const imported = rows.map(row => {
-        const [position, name, birthday, lastValue, currentValue] = row.split(",");
-        return {
-          position,
-          name,
-          birthday,
-          lastValue: Number(lastValue),
-          currentValue: Number(currentValue),
-        };
-      });
-      setData(imported);
+      const lines = e.target.result.split("\n").slice(1); // skip header
+      const newData = lines
+        .map(line => line.trim())
+        .filter(line => line.length > 0)
+        .map(line => {
+          const [position, name, birthday, lastValue, currentValue] = line.split(",");
+          return {
+            position,
+            name,
+            birthday,
+            lastValue: Number(lastValue),
+            currentValue: Number(currentValue)
+          };
+        });
+      setData(newData.slice(0, 23));
     };
     reader.readAsText(file);
   };
 
   const sortedData = [...data].sort((a, b) => {
     if (!sortKey) return 0;
-    const aValue = sortKey === "age" ? calculateAge(a.birthday) : a[sortKey];
-    const bValue = sortKey === "age" ? calculateAge(b.birthday) : b[sortKey];
+    const aValue = sortKey === "birthday" ? new Date(a[sortKey]) : a[sortKey];
+    const bValue = sortKey === "birthday" ? new Date(b[sortKey]) : b[sortKey];
     if (aValue < bValue) return sortAsc ? -1 : 1;
     if (aValue > bValue) return sortAsc ? 1 : -1;
     return 0;
   });
 
-  const sortIcon = (key) => {
-    if (sortKey !== key) return "";
-    return sortAsc ? " ▲" : " ▼";
+  const avgAge = (data.length > 0)
+    ? (data.filter(p => p.position !== "DEF").reduce((sum, p) => sum + calculateAge(p.birthday), 0) /
+       data.filter(p => p.position !== "DEF").length).toFixed(1)
+    : 0;
+
+  const positionColors = {
+    QB: "bg-red-50",
+    RB: "bg-green-50",
+    WR: "bg-blue-50",
+    TE: "bg-yellow-50",
+    K: "bg-pink-50",
+    DEF: "bg-gray-100",
   };
+
+  const positionOptions = ["QB", "RB", "WR", "TE", "K", "DEF"];
 
   return (
     <div className="p-4">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 gap-2">
-        <h2 className="text-xl font-bold">🏈 Dynasty-Trade-Value</h2>
-        <span className="text-sm text-gray-600">{data.length}/{MAX_PLAYERS} Spieler</span>
-      </div>
-
-      <p className="mb-4 text-sm">📈 Durchschnittsalter: <strong>{averageAge(data)} Jahre</strong></p>
-
-      <div className="flex flex-wrap gap-2 mb-4">
+      <h2 className="text-xl font-bold mb-2 flex items-center gap-2">
+        <span role="img" aria-label="football">🏈</span> Dynasty-Trade-Value
+      </h2>
+      <p className="mb-2 text-sm">📏 Durchschnittsalter: <strong>{avgAge} Jahre</strong></p>
+      <div className="flex flex-wrap gap-3 mb-3 items-center">
         <button
           onClick={handleAdd}
-          className={`px-3 py-1 rounded text-white ${data.length >= MAX_PLAYERS ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600'}`}
-          disabled={data.length >= MAX_PLAYERS}
+          className="px-3 py-1 bg-green-600 text-white rounded disabled:opacity-50"
+          disabled={data.length >= 23}
         >
           + Spieler hinzufügen
         </button>
         <button
-          onClick={handleExport}
-          className="px-3 py-1 rounded text-white bg-blue-600"
+          onClick={exportToCSV}
+          className="px-3 py-1 bg-blue-600 text-white rounded"
         >
           CSV Export
         </button>
-        <label className="px-3 py-1 rounded text-white bg-gray-600 cursor-pointer">
+        <button
+          onClick={() => fileInputRef.current.click()}
+          className="px-3 py-1 bg-orange-500 text-white rounded"
+        >
           CSV Import
-          <input type="file" accept=".csv" onChange={handleImport} className="hidden" />
-        </label>
+        </button>
+        <input
+          type="file"
+          accept=".csv"
+          ref={fileInputRef}
+          onChange={importFromCSV}
+          className="hidden"
+        />
+        <span className="text-sm text-gray-600">{data.length}/23 Spieler</span>
       </div>
-
-      <div className="overflow-x-auto">
-        <table className="min-w-[700px] w-full table-auto border border-collapse border-gray-300 text-sm">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="border px-2 py-1">#</th>
-              <th className="border px-2 py-1 cursor-pointer" onClick={() => handleSort("position")}>Position{sortIcon("position")}</th>
-              <th className="border px-2 py-1 cursor-pointer" onClick={() => handleSort("name")}>Spieler{sortIcon("name")}</th>
-              <th className="border px-2 py-1">Geburtstag</th>
-              <th className="border px-2 py-1 cursor-pointer" onClick={() => handleSort("age")}>Alter{sortIcon("age")}</th>
-              <th className="border px-2 py-1 cursor-pointer" onClick={() => handleSort("lastValue")}>Vormonat{sortIcon("lastValue")}</th>
-              <th className="border px-2 py-1 cursor-pointer" onClick={() => handleSort("currentValue")}>Aktuell{sortIcon("currentValue")}</th>
-              <th className="border px-2 py-1">Trend</th>
-              <th className="border px-2 py-1">Aktion</th>
+      <table className="w-full table-auto border border-collapse border-gray-300 text-sm">
+        <thead>
+          <tr className="bg-gray-100">
+            <th className="border p-2 cursor-pointer" onClick={() => handleSort("index")}>#</th>
+            <th className="border p-2 cursor-pointer" onClick={() => handleSort("position")}>Position</th>
+            <th className="border p-2 cursor-pointer" onClick={() => handleSort("name")}>Spieler</th>
+            <th className="border p-2 cursor-pointer" onClick={() => handleSort("birthday")}>Geburtstag</th>
+            <th className="border p-2">Alter</th>
+            <th className="border p-2 cursor-pointer" onClick={() => handleSort("lastValue")}>Vormonat</th>
+            <th className="border p-2 cursor-pointer" onClick={() => handleSort("currentValue")}>Aktuell</th>
+            <th className="border p-2">Trend</th>
+            <th className="border p-2">Aktion</th>
+          </tr>
+        </thead>
+        <tbody>
+          {sortedData.map((row, index) => (
+            <tr key={index} className={positionColors[row.position] || ""}>
+              <td className="border p-2 text-center">{index + 1}</td>
+              <td className="border p-2 text-center">
+                <select
+                  className="w-full border rounded px-1 py-0.5"
+                  value={row.position}
+                  onChange={(e) => handleChange(index, "position", e.target.value)}
+                >
+                  {positionOptions.map(pos => (
+                    <option key={pos} value={pos}>{pos}</option>
+                  ))}
+                </select>
+              </td>
+              <td className="border p-2">
+                <input
+                  type="text"
+                  value={row.name}
+                  onChange={(e) => handleChange(index, "name", e.target.value)}
+                  className="w-full border rounded px-1 py-0.5"
+                />
+              </td>
+              <td className="border p-2">
+                <input
+                  type="date"
+                  value={row.birthday}
+                  onChange={(e) => handleChange(index, "birthday", e.target.value)}
+                  className="w-full border rounded px-1 py-0.5"
+                />
+              </td>
+              <td className="border p-2 text-center">
+                {row.position === "DEF" ? "-" : calculateAge(row.birthday)}
+              </td>
+              <td className="border p-2">
+                <input
+                  type="number"
+                  value={row.lastValue}
+                  onChange={(e) => handleChange(index, "lastValue", e.target.value)}
+                  className="w-full border rounded px-1 py-0.5"
+                />
+              </td>
+              <td className="border p-2">
+                <input
+                  type="number"
+                  value={row.currentValue}
+                  onChange={(e) => handleChange(index, "currentValue", e.target.value)}
+                  className="w-full border rounded px-1 py-0.5"
+                />
+              </td>
+              <td className="border p-2 text-center">
+                {row.currentValue - row.lastValue}
+              </td>
+              <td className="border p-2 text-center">
+                <button
+                  onClick={() => handleDelete(index)}
+                  className="text-red-500 hover:text-red-700"
+                >
+                  🗑️
+                </button>
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            {sortedData.map((player, index) => (
-              <tr key={index} className={positionColors[player.position] || ""}>
-                <td className="border px-2 py-1 text-center">{index + 1}</td>
-                <td className="border px-2 py-1">
-                  <select
-                    value={player.position}
-                    onChange={(e) => handleChange(index, "position", e.target.value)}
-                    className="w-full border rounded px-1 py-0.5"
-                  >
-                    {positionOptions.map(pos => (
-                      <option key={pos} value={pos}>{pos}</option>
-                    ))}
-                  </select>
-                </td>
-                <td className="border px-2 py-1">
-                  <input value={player.name} onChange={(e) => handleChange(index, "name", e.target.value)} className="w-full border" />
-                </td>
-                <td className="border px-2 py-1">
-                  <input type="date" value={player.birthday} onChange={(e) => handleChange(index, "birthday", e.target.value)} className="w-full border" />
-                </td>
-                <td className="border px-2 py-1 text-center">
-                  {player.position === "DEF" ? "-" : calculateAge(player.birthday)}
-                </td>
-                <td className="border px-2 py-1">
-                  <input type="number" value={player.lastValue} onChange={(e) => handleChange(index, "lastValue", e.target.value)} className="w-full border" />
-                </td>
-                <td className="border px-2 py-1">
-                  <input type="number" value={player.currentValue} onChange={(e) => handleChange(index, "currentValue", e.target.value)} className="w-full border" />
-                </td>
-                <td className="border px-2 py-1 text-center">
-                  {player.currentValue - player.lastValue}
-                </td>
-                <td className="border px-2 py-1 text-center">
-                  <button onClick={() => handleDelete(index)} className="text-red-600">🗑</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
