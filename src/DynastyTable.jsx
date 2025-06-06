@@ -15,10 +15,16 @@ function calculateAge(birthday) {
 
 export default function DynastyTable() {
   const [data, setData] = useState([]);
+  const [isClient, setIsClient] = useState(false); // ⬅️ wichtig
 
-  // 🟢 Fix: Nur im Browser laden, damit localStorage auf Vercel nicht crasht
+  // ⬅️ Prüfen, ob wir im Browser sind
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    setIsClient(true);
+  }, []);
+
+  // ⬅️ Lade Daten aus localStorage (nur im Browser)
+  useEffect(() => {
+    if (typeof window !== "undefined" && isClient) {
       const saved = localStorage.getItem("dynastyData");
       if (saved) {
         setData(JSON.parse(saved));
@@ -26,14 +32,14 @@ export default function DynastyTable() {
         setData(initialData);
       }
     }
-  }, []);
+  }, [isClient]);
 
-  // 🟢 Speichern bei Änderungen
+  // ⬅️ Speichern bei jeder Änderung (nur im Browser)
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    if (typeof window !== "undefined" && isClient) {
       localStorage.setItem("dynastyData", JSON.stringify(data));
     }
-  }, [data]);
+  }, [data, isClient]);
 
   const handleChange = (index, field, value) => {
     const updated = [...data];
