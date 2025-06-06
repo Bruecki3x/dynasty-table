@@ -16,19 +16,23 @@ function calculateAge(birthday) {
 export default function DynastyTable() {
   const [data, setData] = useState([]);
 
-  // 🟢 Schritt 2: Lade Daten beim ersten Start aus localStorage
+  // 🟢 Fix: Nur im Browser laden, damit localStorage auf Vercel nicht crasht
   useEffect(() => {
-    const saved = localStorage.getItem("dynastyData");
-    if (saved) {
-      setData(JSON.parse(saved));
-    } else {
-      setData(initialData);
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("dynastyData");
+      if (saved) {
+        setData(JSON.parse(saved));
+      } else {
+        setData(initialData);
+      }
     }
   }, []);
 
-  // 🟢 Schritt 3: Speichere automatisch in localStorage bei jeder Änderung
+  // 🟢 Speichern bei Änderungen
   useEffect(() => {
-    localStorage.setItem("dynastyData", JSON.stringify(data));
+    if (typeof window !== "undefined") {
+      localStorage.setItem("dynastyData", JSON.stringify(data));
+    }
   }, [data]);
 
   const handleChange = (index, field, value) => {
@@ -37,7 +41,6 @@ export default function DynastyTable() {
       field === "currentValue" || field === "lastValue"
         ? Number(value)
         : value;
-
     setData(updated);
   };
 
@@ -74,7 +77,9 @@ export default function DynastyTable() {
   return (
     <div className="p-4">
       <h2 className="text-2xl font-bold mb-2">🏈 Dynasty-Trade-Value</h2>
-      <p className="mb-4">📊 Durchschnittsalter: <strong>{averageAge()} Jahre</strong></p>
+      <p className="mb-4">
+        📊 Durchschnittsalter: <strong>{averageAge()} Jahre</strong>
+      </p>
       <button
         onClick={handleAdd}
         className="mb-4 px-4 py-1 bg-green-600 text-white rounded"
