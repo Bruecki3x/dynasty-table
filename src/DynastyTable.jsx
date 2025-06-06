@@ -15,20 +15,23 @@ function calculateAge(birthday) {
 
 export default function DynastyTable() {
   const [data, setData] = useState([]);
-  const [sortKey, setSortKey] = useState(null);
-  const [sortAsc, setSortAsc] = useState(true);
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
 
   useEffect(() => {
-    const saved = localStorage.getItem("dynastyData");
-    if (saved) {
-      setData(JSON.parse(saved));
-    } else {
-      setData(initialData);
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("dynastyData");
+      if (saved) {
+        setData(JSON.parse(saved));
+      } else {
+        setData(initialData);
+      }
     }
   }, []);
 
   useEffect(() => {
-    localStorage.setItem("dynastyData", JSON.stringify(data));
+    if (typeof window !== "undefined") {
+      localStorage.setItem("dynastyData", JSON.stringify(data));
+    }
   }, [data]);
 
   const handleChange = (index, field, value) => {
@@ -59,121 +62,92 @@ export default function DynastyTable() {
   };
 
   const averageAge = () => {
-    const filtered = data.filter((player) => player.position !== "DEF");
+    const filtered = data.filter((p) => p.position !== "DEF");
     const sum = filtered.reduce(
       (acc, player) => acc + calculateAge(player.birthday),
       0
     );
-    return filtered.length > 0
-      ? (sum / filtered.length).toFixed(1)
-      : "Keine Spieler";
+    return filtered.length > 0 ? (sum / filtered.length).toFixed(1) : "-";
   };
 
-  const positionCounts = {
-    QB: 0,
-    RB: 0,
-    WR: 0,
-    TE: 0,
-    K: 0,
-    DEF: 0,
-  };
-  data.forEach((player) => {
-    if (positionCounts[player.position] !== undefined) {
-      positionCounts[player.position]++;
-    }
-  });
-
-  const handleSort = (key) => {
-    if (sortKey === key) {
-      setSortAsc(!sortAsc);
-    } else {
-      setSortKey(key);
-      setSortAsc(true);
-    }
-
+  const sortData = (key) => {
+    const direction =
+      sortConfig.key === key && sortConfig.direction === "asc" ? "desc" : "asc";
     const sorted = [...data].sort((a, b) => {
-      let aVal, bVal;
-
-      if (key === "birthday") {
-        aVal = new Date(a.birthday);
-        bVal = new Date(b.birthday);
-      } else if (key === "age") {
-        aVal = calculateAge(a.birthday);
-        bVal = calculateAge(b.birthday);
-      } else if (key === "trend") {
-        aVal = a.currentValue - a.lastValue;
-        bVal = b.currentValue - b.lastValue;
-      } else {
-        aVal = a[key];
-        bVal = b[key];
-      }
-
-      if (aVal < bVal) return sortAsc ? -1 : 1;
-      if (aVal > bVal) return sortAsc ? 1 : -1;
+      const valA = key === "age" ? calculateAge(a.birthday) : a[key];
+      const valB = key === "age" ? calculateAge(b.birthday) : b[key];
+      if (valA < valB) return direction === "asc" ? -1 : 1;
+      if (valA > valB) return direction === "asc" ? 1 : -1;
       return 0;
     });
-
+    setSortConfig({ key, direction });
     setData(sorted);
   };
 
-  const getSortArrow = (key) => {
-    if (sortKey !== key) return "";
-    return sortAsc ? " ▲" : " ▼";
+  const positionCount = data.reduce((acc, p) => {
+    acc[p.position] = (acc[p.position] || 0) + 1;
+    return acc;
+  }, {});
+
+  const sortArrow = (key) => {
+    if (sortConfig.key === key) {
+      return sortConfig.direction === "asc" ? "▲" : "▼";
+    }
+    return "";
   };
 
+  const columnStyle = "px-1 py-0.5 text-left whitespace-nowrap";
+  const headerStyle = "bg-gray-200 px-1 py-1 text-left text-xs";
+
   return (
-    <div className="p-4">
-      <h2 className="text-2xl font-bold mb-1">🏈 Dynasty-Trade-Value</h2>
-      <p className="text-sm mb-1 text-gray-600">
-        Positionen:
-        {" QB (" + positionCounts.QB + ")"}
-        {" | RB (" + positionCounts.RB + ")"}
-        {" | WR (" + positionCounts.WR + ")"}
-        {" | TE (" + positionCounts.TE + ")"}
-        {" | K (" + positionCounts.K + ")"}
-        {" | DEF (" + positionCounts.DEF + ")"}
+    <div className="p-4 text-xs">
+      <h2 className="text-xl font-bold mb-1">🏈 Dynasty-Trade-Value</h2>
+      <p className="mb-1">
+        🧮 Positionen: {Object.entries(positionCount)
+          .map(([pos, count]) => `${pos} (${count})`)
+          .join(" | ")}<br />
+        📊 Durchschnittsalter: <strong>{averageAge()} Jahre</strong>
       </p>
-      <p className="mb-4">📊 Durchschnittsalter: <strong>{averageAge()} Jahre</strong></p>
       <button
         onClick={handleAdd}
-        className="mb-4 px-4 py-1 bg-green-600 text-white rounded"
+        className="mb-2 px-2 py-1 bg-green-600 text-white rounded"
       >
         + Spieler hinzufügen
       </button>
-      <table className="w-full table-auto border border-collapse border-gray-300 text-sm">
+
+      <table className="w-full table-auto border border-collapse border-gray-300">
         <thead>
-          <tr className="bg-gray-200">
-            <th>#</th>
-            <th onClick={() => handleSort("position")} className="cursor-pointer">Position{getSortArrow("position")}</th>
-            <th onClick={() => handleSort("name")} className="cursor-pointer">Spieler{getSortArrow("name")}</th>
-            <th onClick={() => handleSort("birthday")} className="cursor-pointer">Geburtstag{getSortArrow("birthday")}</th>
-            <th onClick={() => handleSort("age")} className="cursor-pointer">Alter{getSortArrow("age")}</th>
-            <th onClick={() => handleSort("lastValue")} className="cursor-pointer">Vormonat{getSortArrow("lastValue")}</th>
-            <th onClick={() => handleSort("currentValue")} className="cursor-pointer">Aktuell{getSortArrow("currentValue")}</th>
-            <th onClick={() => handleSort("trend")} className="cursor-pointer">Trend{getSortArrow("trend")}</th>
-            <th>Aktion</th>
+          <tr>
+            <th className={headerStyle}>#</th>
+            <th className={headerStyle} onClick={() => sortData("position")}>Position {sortArrow("position")}</th>
+            <th className={headerStyle} onClick={() => sortData("name")}>Spieler {sortArrow("name")}</th>
+            <th className={headerStyle}>Geburtstag</th>
+            <th className={headerStyle} onClick={() => sortData("age")}>Alter {sortArrow("age")}</th>
+            <th className={headerStyle} onClick={() => sortData("lastValue")}>Vormonat {sortArrow("lastValue")}</th>
+            <th className={headerStyle} onClick={() => sortData("currentValue")}>Aktuell {sortArrow("currentValue")}</th>
+            <th className={headerStyle} onClick={() => sortData("trend")}>Trend {sortArrow("trend")}</th>
+            <th className={headerStyle}>Aktion</th>
           </tr>
         </thead>
         <tbody>
           {data.map((player, index) => {
             const age = calculateAge(player.birthday);
             const trend = player.currentValue - player.lastValue;
-
-            const isDEF = player.position === "DEF";
-
-            const color = {
+            const bgColor = {
               QB: "bg-red-100",
               RB: "bg-green-100",
               WR: "bg-blue-100",
               TE: "bg-yellow-100",
-              K: "bg-purple-200",
+              K: "bg-purple-100",
               DEF: "bg-gray-100",
             }[player.position] || "";
 
+            const isDEF = player.position === "DEF";
+
             return (
-              <tr key={index} className={`${color} border-b`}>
-                <td>{index + 1}</td>
-                <td>
+              <tr key={index} className={`${bgColor} border-b text-xs`}>
+                <td className={columnStyle}>{index + 1}</td>
+                <td className={columnStyle}>
                   <select
                     value={player.position}
                     onChange={(e) =>
@@ -188,7 +162,7 @@ export default function DynastyTable() {
                     ))}
                   </select>
                 </td>
-                <td>
+                <td className={columnStyle}>
                   <input
                     type="text"
                     value={player.name}
@@ -198,19 +172,20 @@ export default function DynastyTable() {
                     className="w-full"
                   />
                 </td>
-                <td>
-                  <input
-                    type="date"
-                    value={player.birthday}
-                    onChange={(e) =>
-                      handleChange(index, "birthday", e.target.value)
-                    }
-                    className="w-full"
-                    disabled={isDEF}
-                  />
+                <td className={columnStyle}>
+                  {!isDEF && (
+                    <input
+                      type="date"
+                      value={player.birthday}
+                      onChange={(e) =>
+                        handleChange(index, "birthday", e.target.value)
+                      }
+                      className="w-full"
+                    />
+                  )}
                 </td>
-                <td>{isDEF ? "–" : age}</td>
-                <td>
+                <td className={columnStyle}>{!isDEF ? age : "-"}</td>
+                <td className={columnStyle}>
                   <input
                     type="number"
                     value={player.lastValue}
@@ -220,7 +195,7 @@ export default function DynastyTable() {
                     className="w-full"
                   />
                 </td>
-                <td>
+                <td className={columnStyle}>
                   <input
                     type="number"
                     value={player.currentValue}
@@ -230,8 +205,8 @@ export default function DynastyTable() {
                     className="w-full"
                   />
                 </td>
-                <td>{trend}</td>
-                <td>
+                <td className={columnStyle}>{trend}</td>
+                <td className={columnStyle}>
                   <button
                     onClick={() => handleDelete(index)}
                     className="text-red-600"
@@ -244,7 +219,7 @@ export default function DynastyTable() {
           })}
         </tbody>
       </table>
-      <p className="text-right text-xs mt-2 text-gray-500">
+      <p className="text-right text-xs mt-1 text-gray-500">
         {data.length}/23 Spieler
       </p>
     </div>
