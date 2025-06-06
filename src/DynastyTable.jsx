@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from "react";
 
-const initialData = [];
-
 function calculateAge(birthday) {
   const birth = new Date(birthday);
   const today = new Date();
@@ -13,51 +11,50 @@ function calculateAge(birthday) {
   return age;
 }
 
+const defaultPlayer = {
+  position: "QB",
+  name: "",
+  birthday: "2000-01-01",
+  lastValue: 0,
+  currentValue: 0,
+};
+
 export default function DynastyTable() {
   const [data, setData] = useState([]);
+  const [isClient, setIsClient] = useState(false); // 🧠 zeigt an, ob Browser verfügbar ist
 
-  // ⛑ Daten beim ersten Render clientseitig laden
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("dynastyData");
-      if (saved) {
+      setIsClient(true);
+      const stored = localStorage.getItem("dynastyData");
+      if (stored) {
         try {
-          setData(JSON.parse(saved));
-        } catch (e) {
-          console.error("Fehler beim Parsen von localStorage:", e);
+          setData(JSON.parse(stored));
+        } catch (err) {
+          console.error("Fehler beim Parsen:", err);
         }
-      } else {
-        setData(initialData);
       }
     }
   }, []);
 
-  // 💾 Automatisch speichern
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    if (isClient) {
       localStorage.setItem("dynastyData", JSON.stringify(data));
     }
-  }, [data]);
+  }, [data, isClient]);
 
   const handleChange = (index, field, value) => {
     const updated = [...data];
     updated[index][field] =
-      field === "currentValue" || field === "lastValue" ? Number(value) : value;
+      field === "currentValue" || field === "lastValue"
+        ? Number(value)
+        : value;
     setData(updated);
   };
 
   const handleAdd = () => {
     if (data.length >= 23) return;
-    setData([
-      ...data,
-      {
-        position: "QB",
-        name: "",
-        birthday: "2000-01-01",
-        lastValue: 0,
-        currentValue: 0,
-      },
-    ]);
+    setData([...data, { ...defaultPlayer }]);
   };
 
   const handleDelete = (index) => {
@@ -65,29 +62,27 @@ export default function DynastyTable() {
   };
 
   const averageAge = () => {
-    const filtered = data.filter((p) => p.position !== "DEF");
-    const sum = filtered.reduce(
-      (acc, p) => acc + calculateAge(p.birthday),
-      0
-    );
-    return filtered.length > 0
-      ? (sum / filtered.length).toFixed(1)
+    const relevant = data.filter((p) => p.position !== "DEF");
+    const sum = relevant.reduce((acc, p) => acc + calculateAge(p.birthday), 0);
+    return relevant.length > 0
+      ? (sum / relevant.length).toFixed(1)
       : "Keine Spieler";
   };
+
+  if (!isClient) {
+    return <p>Lade Daten...</p>; // 🚀 blockiert das Rendern, bis Browser bereit
+  }
 
   return (
     <div className="p-4">
       <h2 className="text-2xl font-bold mb-2">🏈 Dynasty-Trade-Value</h2>
-      <p className="mb-4">
-        📊 Durchschnittsalter: <strong>{averageAge()} Jahre</strong>
-      </p>
+      <p className="mb-4">📊 Durchschnittsalter: <strong>{averageAge()} Jahre</strong></p>
       <button
         onClick={handleAdd}
         className="mb-4 px-4 py-1 bg-green-600 text-white rounded"
       >
         + Spieler hinzufügen
       </button>
-
       <table className="w-full table-auto border border-collapse border-gray-300 text-sm">
         <thead>
           <tr className="bg-gray-200">
@@ -187,7 +182,6 @@ export default function DynastyTable() {
           })}
         </tbody>
       </table>
-
       <p className="text-right text-xs mt-2 text-gray-500">
         {data.length}/23 Spieler
       </p>
