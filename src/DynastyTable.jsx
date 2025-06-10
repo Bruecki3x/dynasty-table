@@ -48,6 +48,21 @@ export default function DynastyTable() {
       );
       return updated;
     });
+
+    setSortedData((prevSorted) =>
+      prevSorted.map((player) =>
+        player.id === id
+          ? {
+              ...player,
+              [field]: field === "currentValue" || field === "lastValue" ? Number(value) : value,
+              birthday:
+                field === "position" && (value === "DEF" || value === "PICK")
+                  ? ""
+                  : player.birthday,
+            }
+          : player
+      )
+    );
   };
 
   const handleAdd = () => {
