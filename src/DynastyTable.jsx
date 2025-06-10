@@ -38,7 +38,9 @@ export default function DynastyTable() {
         ? Number(value)
         : value;
 
-    if (field === "position" && value === "DEF") {
+    const isDEForPICK = updated[index].position === "DEF" || updated[index].position === "PICK";
+
+    if (field === "position" && isDEForPICK) {
       updated[index].birthday = "";
       updated[index].lastValue = 0;
       updated[index].currentValue = 0;
@@ -48,7 +50,7 @@ export default function DynastyTable() {
   };
 
   const handleAdd = () => {
-    if (data.length >= 23) return;
+    if (data.length >= 40) return;
 
     setData([
       ...data,
@@ -67,7 +69,9 @@ export default function DynastyTable() {
   };
 
   const averageAge = () => {
-    const filtered = data.filter((p) => p.position !== "DEF");
+    const filtered = data.filter(
+      (p) => p.position !== "DEF" && p.position !== "PICK"
+    );
     const sum = filtered.reduce(
       (acc, p) => acc + calculateAge(p.birthday),
       0
@@ -103,53 +107,6 @@ export default function DynastyTable() {
     if (valA > valB) return sortAsc ? 1 : -1;
     return 0;
   });
-
-  const exportCSV = () => {
-    const header = ["Position", "Name", "Geburtstag", "Vormonat", "Aktuell"];
-    const rows = data.map((p) => [
-      p.position,
-      p.name,
-      p.birthday,
-      p.lastValue,
-      p.currentValue,
-    ]);
-    const csv = [header, ...rows].map((r) => r.join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "dynasty_export.csv";
-    a.click();
-  };
-
-  const importCSV = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const text = event.target.result;
-      const lines = text.split("\n").slice(1); // skip header
-      const imported = lines.map((line) => {
-        const [position, name, birthday, lastValue, currentValue] = line.split(",");
-        return {
-          position,
-          name,
-          birthday,
-          lastValue: Number(lastValue),
-          currentValue: Number(currentValue),
-        };
-      });
-      setData(imported);
-    };
-    reader.readAsText(file);
-  };
-
-  const renderArrow = (key) => {
-    if (sortKey !== key) return "";
-    return sortAsc ? "▲" : "▼";
-  };
-
   return (
     <div className="p-4">
       <h2 className="text-2xl font-bold mb-2">🏈 Dynasty-Trade-Value</h2>
@@ -195,8 +152,8 @@ export default function DynastyTable() {
         </thead>
         <tbody>
           {sortedData.map((player, index) => {
-            const isDEF = player.position === "DEF";
-            const age = isDEF ? "–" : calculateAge(player.birthday);
+            const isSpecial = player.position === "DEF" || player.position === "PICK";
+            const age = isSpecial ? "–" : calculateAge(player.birthday);
             const trend = player.currentValue - player.lastValue;
 
             const color = {
@@ -206,6 +163,7 @@ export default function DynastyTable() {
               TE: "bg-yellow-100",
               K: "bg-purple-100",
               DEF: "bg-gray-100",
+              PICK: "bg-white",
             }[player.position] || "";
 
             return (
@@ -217,7 +175,7 @@ export default function DynastyTable() {
                     onChange={(e) => handleChange(index, "position", e.target.value)}
                     className="w-full"
                   >
-                    {["QB", "RB", "WR", "TE", "K", "DEF"].map((pos) => (
+                    {["QB", "RB", "WR", "TE", "K", "DEF", "PICK"].map((pos) => (
                       <option key={pos} value={pos}>{pos}</option>
                     ))}
                   </select>
@@ -236,7 +194,7 @@ export default function DynastyTable() {
                     value={player.birthday}
                     onChange={(e) => handleChange(index, "birthday", e.target.value)}
                     className="w-full"
-                    disabled={isDEF}
+                    disabled={isSpecial}
                   />
                 </td>
                 <td className="text-center">{age}</td>
@@ -246,7 +204,7 @@ export default function DynastyTable() {
                     value={player.lastValue}
                     onChange={(e) => handleChange(index, "lastValue", e.target.value)}
                     className="w-full"
-                    disabled={isDEF}
+                    disabled={isSpecial}
                   />
                 </td>
                 <td>
@@ -255,10 +213,10 @@ export default function DynastyTable() {
                     value={player.currentValue}
                     onChange={(e) => handleChange(index, "currentValue", e.target.value)}
                     className="w-full"
-                    disabled={isDEF}
+                    disabled={isSpecial}
                   />
                 </td>
-                <td className="text-center">{isDEF ? 0 : trend}</td>
+                <td className="text-center">{isSpecial ? 0 : trend}</td>
                 <td>
                   <button
                     onClick={() => handleDelete(index)}
@@ -272,7 +230,7 @@ export default function DynastyTable() {
       </table>
 
       <p className="text-right text-xs mt-2 text-gray-500">
-        {data.length}/23 Spieler
+        {data.length}/40 Spieler
       </p>
     </div>
   );
