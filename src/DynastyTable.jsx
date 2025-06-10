@@ -67,17 +67,23 @@ export default function DynastyTable() {
   };
 
   const averageAge = () => {
-    const filtered = data.filter(
-      (p) => p.position !== "DEF" && p.position !== "PICK"
-    );
-    const sum = filtered.reduce(
-      (acc, p) => acc + calculateAge(p.birthday),
-      0
-    );
-    return filtered.length > 0
-      ? (sum / filtered.length).toFixed(1)
-      : "Keine Spieler";
+    const filtered = data.filter((p) => p.position !== "DEF" && p.position !== "PICK");
+    const sum = filtered.reduce((acc, p) => acc + calculateAge(p.birthday), 0);
+    return filtered.length > 0 ? (sum / filtered.length).toFixed(1) : "Keine Spieler";
   };
+
+  const countByPosition = () => {
+    const counts = { QB: 0, RB: 0, WR: 0, TE: 0, K: 0, DEF: 0, PICK: 0 };
+    data.forEach((p) => {
+      if (counts[p.position] !== undefined) {
+        counts[p.position]++;
+      }
+    });
+    return counts;
+  };
+
+  const totalLastValue = data.reduce((sum, p) => sum + p.lastValue, 0);
+  const totalCurrentValue = data.reduce((sum, p) => sum + p.currentValue, 0);
 
   const handleSort = (key) => {
     if (sortKey === key) {
@@ -152,32 +158,24 @@ export default function DynastyTable() {
     return sortAsc ? "▲" : "▼";
   };
 
+  const counts = countByPosition();
+
   return (
     <div className="p-4">
       <h2 className="text-2xl font-bold mb-2">🏈 Dynasty-Trade-Value</h2>
-      <p className="mb-4">📊 Durchschnittsalter: <strong>{averageAge()} Jahre</strong></p>
+
+      <div className="mb-4 space-y-1 text-sm">
+        <p>📊 Durchschnittsalter: <strong>{averageAge()} Jahre</strong></p>
+        <p>📌 Positionen: QB: {counts.QB} | RB: {counts.RB} | WR: {counts.WR} | TE: {counts.TE} | K: {counts.K} | DEF: {counts.DEF} | PICK: {counts.PICK}</p>
+        <p>💰 Gesamtwert Vormonat: <strong>{totalLastValue}</strong> | Aktuell: <strong>{totalCurrentValue}</strong></p>
+      </div>
 
       <div className="flex flex-wrap gap-2 mb-4">
-        <button
-          onClick={handleAdd}
-          className="px-4 py-1 bg-green-600 text-white rounded"
-        >
-          + Spieler hinzufügen
-        </button>
-        <button
-          onClick={exportCSV}
-          className="px-4 py-1 bg-blue-600 text-white rounded"
-        >
-          CSV Export
-        </button>
+        <button onClick={handleAdd} className="px-4 py-1 bg-green-600 text-white rounded">+ Spieler hinzufügen</button>
+        <button onClick={exportCSV} className="px-4 py-1 bg-blue-600 text-white rounded">CSV Export</button>
         <label className="cursor-pointer px-4 py-1 bg-purple-600 text-white rounded">
           CSV Import
-          <input
-            type="file"
-            accept=".csv"
-            onChange={importCSV}
-            className="hidden"
-          />
+          <input type="file" accept=".csv" onChange={importCSV} className="hidden" />
         </label>
       </div>
 
