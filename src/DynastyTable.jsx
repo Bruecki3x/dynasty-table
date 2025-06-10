@@ -16,11 +16,14 @@ export default function DynastyTable() {
   const [data, setData] = useState([]);
   const [sortKey, setSortKey] = useState(null);
   const [sortAsc, setSortAsc] = useState(true);
+  const [sortedData, setSortedData] = useState([]);
 
   useEffect(() => {
     const saved = localStorage.getItem("dynastyData");
     if (saved) {
-      setData(JSON.parse(saved));
+      const parsed = JSON.parse(saved);
+      const enriched = parsed.map((p) => ({ id: uuidv4(), ...p }));
+      setData(enriched);
     }
   }, []);
 
@@ -28,19 +31,38 @@ export default function DynastyTable() {
     localStorage.setItem("dynastyData", JSON.stringify(data));
   }, [data]);
 
+  useEffect(() => {
+    if (!sortKey) {
+      setSortedData(data);
+      return;
+    }
+    const sorted = [...data].sort((a, b) => {
+      const valA = sortKey === "age"
+        ? calculateAge(a.birthday)
+        : sortKey === "trend"
+        ? a.currentValue - a.lastValue
+        : a[sortKey];
+      const valB = sortKey === "age"
+        ? calculateAge(b.birthday)
+        : sortKey === "trend"
+        ? b.currentValue - b.lastValue
+        : b[sortKey];
+      if (valA < valB) return sortAsc ? -1 : 1;
+      if (valA > valB) return sortAsc ? 1 : -1;
+      return 0;
+    });
+    setSortedData(sorted);
+  }, [sortKey, sortAsc, data]);
+
   const handleChange = (id, field, value) => {
     setData((prevData) =>
       prevData.map((player) =>
         player.id === id
           ? {
               ...player,
-              [field]:
-                field === "currentValue" || field === "lastValue"
-                  ? Number(value)
-                  : value,
+              [field]: field === "currentValue" || field === "lastValue" ? Number(value) : value,
               birthday:
-                field === "position" &&
-                (value === "DEF" || value === "PICK")
+                field === "position" && (value === "DEF" || value === "PICK")
                   ? ""
                   : player.birthday,
             }
@@ -69,13 +91,9 @@ export default function DynastyTable() {
   };
 
   const averageAge = () => {
-    const filtered = data.filter(
-      (p) => p.position !== "DEF" && p.position !== "PICK"
-    );
+    const filtered = data.filter((p) => p.position !== "DEF" && p.position !== "PICK");
     const sum = filtered.reduce((acc, p) => acc + calculateAge(p.birthday), 0);
-    return filtered.length > 0
-      ? (sum / filtered.length).toFixed(1)
-      : "Keine Spieler";
+    return filtered.length > 0 ? (sum / filtered.length).toFixed(1) : "Keine Spieler";
   };
 
   const countByPosition = () => {
@@ -99,26 +117,6 @@ export default function DynastyTable() {
       setSortAsc(true);
     }
   };
-
-  const sortedData = [...data].sort((a, b) => {
-    if (!sortKey) return 0;
-    const valA =
-      sortKey === "age"
-        ? calculateAge(a.birthday)
-        : sortKey === "trend"
-        ? a.currentValue - a.lastValue
-        : a[sortKey];
-    const valB =
-      sortKey === "age"
-        ? calculateAge(b.birthday)
-        : sortKey === "trend"
-        ? b.currentValue - b.lastValue
-        : b[sortKey];
-
-    if (valA < valB) return sortAsc ? -1 : 1;
-    if (valA > valB) return sortAsc ? 1 : -1;
-    return 0;
-  });
 
   const exportCSV = () => {
     const header = ["Position", "Name", "Geburtstag", "Vormonat", "Aktuell"];
@@ -147,8 +145,7 @@ export default function DynastyTable() {
       const text = event.target.result;
       const lines = text.split("\n").slice(1);
       const imported = lines.map((line) => {
-        const [position, name, birthday, lastValue, currentValue] =
-          line.split(",");
+        const [position, name, birthday, lastValue, currentValue] = line.split(",");
         return {
           id: uuidv4(),
           position,
@@ -175,24 +172,14 @@ export default function DynastyTable() {
       <h2 className="text-2xl font-bold mb-2">🏈 Dynasty-Trade-Value</h2>
 
       <div className="mb-4 space-y-1 text-sm">
-        <p>
-          📊 Durchschnittsalter: <strong>{averageAge()} Jahre</strong>
-        </p>
-        <p>
-          📌 Positionen: QB: {counts.QB} | RB: {counts.RB} | WR: {counts.WR} | TE: {counts.TE} | K: {counts.K} | DEF: {counts.DEF} | PICK: {counts.PICK}
-        </p>
-        <p>
-          💰 Gesamtwert Vormonat: <strong>{totalLastValue}</strong> | Aktuell: <strong>{totalCurrentValue}</strong>
-        </p>
+        <p>📊 Durchschnittsalter: <strong>{averageAge()} Jahre</strong></p>
+        <p>📌 Positionen: QB: {counts.QB} | RB: {counts.RB} | WR: {counts.WR} | TE: {counts.TE} | K: {counts.K} | DEF: {counts.DEF} | PICK: {counts.PICK}</p>
+        <p>💰 Gesamtwert Vormonat: <strong>{totalLastValue}</strong> | Aktuell: <strong>{totalCurrentValue}</strong></p>
       </div>
 
       <div className="flex flex-wrap gap-2 mb-4">
-        <button onClick={handleAdd} className="px-4 py-1 bg-green-600 text-white rounded">
-          + Spieler hinzufügen
-        </button>
-        <button onClick={exportCSV} className="px-4 py-1 bg-blue-600 text-white rounded">
-          CSV Export
-        </button>
+        <button onClick={handleAdd} className="px-4 py-1 bg-green-600 text-white rounded">+ Spieler hinzufügen</button>
+        <button onClick={exportCSV} className="px-4 py-1 bg-blue-600 text-white rounded">CSV Export</button>
         <label className="cursor-pointer px-4 py-1 bg-purple-600 text-white rounded">
           CSV Import
           <input type="file" accept=".csv" onChange={importCSV} className="hidden" />
@@ -279,9 +266,7 @@ export default function DynastyTable() {
                 </td>
                 <td className="text-center">{isSpecial ? 0 : trend}</td>
                 <td>
-                  <button onClick={() => handleDelete(player.id)} className="text-red-600">
-                    🗑️
-                  </button>
+                  <button onClick={() => handleDelete(player.id)} className="text-red-600">🗑️</button>
                 </td>
               </tr>
             );
