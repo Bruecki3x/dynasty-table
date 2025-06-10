@@ -31,19 +31,18 @@ export default function DynastyTable() {
     localStorage.setItem("dynastyData", JSON.stringify(data));
   }, [data]);
 
-  const handleChange = (index, field, value) => {
-    const updated = [...data];
-    updated[index][field] =
-      field === "currentValue" || field === "lastValue"
-        ? Number(value)
-        : value;
-
-    const isSpecial = updated[index].position === "DEF" || updated[index].position === "PICK";
-
-    if (field === "position" && isSpecial) {
-      updated[index].birthday = "";
-    }
-
+  const handleChange = (id, field, value) => {
+    const updated = data.map((player) => {
+      if (player.id !== id) return player;
+      const updatedPlayer = {
+        ...player,
+        [field]: field === "currentValue" || field === "lastValue" ? Number(value) : value,
+      };
+      if (field === "position" && (value === "DEF" || value === "PICK")) {
+        updatedPlayer.birthday = "";
+      }
+      return updatedPlayer;
+    });
     setData(updated);
   };
 
@@ -53,6 +52,7 @@ export default function DynastyTable() {
     setData([
       ...data,
       {
+        id: Date.now(),
         position: "QB",
         name: "",
         birthday: "2000-01-01",
@@ -62,14 +62,21 @@ export default function DynastyTable() {
     ]);
   };
 
-  const handleDelete = (index) => {
-    setData(data.filter((_, i) => i !== index));
+  const handleDelete = (id) => {
+    setData(data.filter((p) => p.id !== id));
   };
 
   const averageAge = () => {
-    const filtered = data.filter((p) => p.position !== "DEF" && p.position !== "PICK");
-    const sum = filtered.reduce((acc, p) => acc + calculateAge(p.birthday), 0);
-    return filtered.length > 0 ? (sum / filtered.length).toFixed(1) : "Keine Spieler";
+    const filtered = data.filter(
+      (p) => p.position !== "DEF" && p.position !== "PICK"
+    );
+    const sum = filtered.reduce(
+      (acc, p) => acc + calculateAge(p.birthday),
+      0
+    );
+    return filtered.length > 0
+      ? (sum / filtered.length).toFixed(1)
+      : "Keine Spieler";
   };
 
   const countByPosition = () => {
@@ -141,6 +148,7 @@ export default function DynastyTable() {
       const imported = lines.map((line) => {
         const [position, name, birthday, lastValue, currentValue] = line.split(",");
         return {
+          id: Date.now() + Math.random(),
           position,
           name,
           birthday,
@@ -163,7 +171,6 @@ export default function DynastyTable() {
   return (
     <div className="p-4">
       <h2 className="text-2xl font-bold mb-2">🏈 Dynasty-Trade-Value</h2>
-
       <div className="mb-4 space-y-1 text-sm">
         <p>📊 Durchschnittsalter: <strong>{averageAge()} Jahre</strong></p>
         <p>📌 Positionen: QB: {counts.QB} | RB: {counts.RB} | WR: {counts.WR} | TE: {counts.TE} | K: {counts.K} | DEF: {counts.DEF} | PICK: {counts.PICK}</p>
@@ -210,12 +217,12 @@ export default function DynastyTable() {
             }[player.position] || "";
 
             return (
-              <tr key={index} className={`${color} border-b`}>
+              <tr key={player.id} className={`${color} border-b`}>
                 <td>{index + 1}</td>
                 <td>
                   <select
                     value={player.position}
-                    onChange={(e) => handleChange(index, "position", e.target.value)}
+                    onChange={(e) => handleChange(player.id, "position", e.target.value)}
                     className="w-full"
                   >
                     {["QB", "RB", "WR", "TE", "K", "DEF", "PICK"].map((pos) => (
@@ -227,7 +234,7 @@ export default function DynastyTable() {
                   <input
                     type="text"
                     value={player.name}
-                    onChange={(e) => handleChange(index, "name", e.target.value)}
+                    onChange={(e) => handleChange(player.id, "name", e.target.value)}
                     className="w-full"
                   />
                 </td>
@@ -235,7 +242,7 @@ export default function DynastyTable() {
                   <input
                     type="date"
                     value={player.birthday}
-                    onChange={(e) => handleChange(index, "birthday", e.target.value)}
+                    onChange={(e) => handleChange(player.id, "birthday", e.target.value)}
                     className="w-full"
                     disabled={isSpecial}
                   />
@@ -245,7 +252,7 @@ export default function DynastyTable() {
                   <input
                     type="number"
                     value={player.lastValue}
-                    onChange={(e) => handleChange(index, "lastValue", e.target.value)}
+                    onChange={(e) => handleChange(player.id, "lastValue", e.target.value)}
                     className="w-full"
                   />
                 </td>
@@ -253,14 +260,14 @@ export default function DynastyTable() {
                   <input
                     type="number"
                     value={player.currentValue}
-                    onChange={(e) => handleChange(index, "currentValue", e.target.value)}
+                    onChange={(e) => handleChange(player.id, "currentValue", e.target.value)}
                     className="w-full"
                   />
                 </td>
                 <td className="text-center">{isSpecial ? 0 : trend}</td>
                 <td>
                   <button
-                    onClick={() => handleDelete(index)}
+                    onClick={() => handleDelete(player.id)}
                     className="text-red-600"
                   >🗑️</button>
                 </td>
