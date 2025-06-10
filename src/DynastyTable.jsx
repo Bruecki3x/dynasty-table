@@ -24,6 +24,7 @@ export default function DynastyTable() {
       const parsed = JSON.parse(saved);
       const enriched = parsed.map((p) => ({ id: uuidv4(), ...p }));
       setData(enriched);
+      setSortedData(enriched);
     }
   }, []);
 
@@ -31,32 +32,9 @@ export default function DynastyTable() {
     localStorage.setItem("dynastyData", JSON.stringify(data));
   }, [data]);
 
-  useEffect(() => {
-    if (!sortKey) {
-      setSortedData(data);
-      return;
-    }
-    const sorted = [...data].sort((a, b) => {
-      const valA = sortKey === "age"
-        ? calculateAge(a.birthday)
-        : sortKey === "trend"
-        ? a.currentValue - a.lastValue
-        : a[sortKey];
-      const valB = sortKey === "age"
-        ? calculateAge(b.birthday)
-        : sortKey === "trend"
-        ? b.currentValue - b.lastValue
-        : b[sortKey];
-      if (valA < valB) return sortAsc ? -1 : 1;
-      if (valA > valB) return sortAsc ? 1 : -1;
-      return 0;
-    });
-    setSortedData(sorted);
-  }, [sortKey, sortAsc, data]);
-
   const handleChange = (id, field, value) => {
-    setData((prevData) =>
-      prevData.map((player) =>
+    setData((prevData) => {
+      const updated = prevData.map((player) =>
         player.id === id
           ? {
               ...player,
@@ -67,27 +45,30 @@ export default function DynastyTable() {
                   : player.birthday,
             }
           : player
-      )
-    );
+      );
+      return updated;
+    });
   };
 
   const handleAdd = () => {
     if (data.length >= 40) return;
-    setData([
-      ...data,
-      {
-        id: uuidv4(),
-        position: "QB",
-        name: "",
-        birthday: "2000-01-01",
-        lastValue: 0,
-        currentValue: 0,
-      },
-    ]);
+    const newPlayer = {
+      id: uuidv4(),
+      position: "QB",
+      name: "",
+      birthday: "2000-01-01",
+      lastValue: 0,
+      currentValue: 0,
+    };
+    const updated = [...data, newPlayer];
+    setData(updated);
+    setSortedData(updated);
   };
 
   const handleDelete = (id) => {
-    setData(data.filter((p) => p.id !== id));
+    const updated = data.filter((p) => p.id !== id);
+    setData(updated);
+    setSortedData(updated);
   };
 
   const averageAge = () => {
@@ -110,12 +91,32 @@ export default function DynastyTable() {
   const totalCurrentValue = data.reduce((sum, p) => sum + p.currentValue, 0);
 
   const handleSort = (key) => {
+    let newAsc = sortAsc;
     if (sortKey === key) {
-      setSortAsc(!sortAsc);
+      newAsc = !sortAsc;
+      setSortAsc(newAsc);
     } else {
       setSortKey(key);
+      newAsc = true;
       setSortAsc(true);
     }
+
+    const sorted = [...data].sort((a, b) => {
+      const valA = key === "age"
+        ? calculateAge(a.birthday)
+        : key === "trend"
+        ? a.currentValue - a.lastValue
+        : a[key];
+      const valB = key === "age"
+        ? calculateAge(b.birthday)
+        : key === "trend"
+        ? b.currentValue - b.lastValue
+        : b[key];
+      if (valA < valB) return newAsc ? -1 : 1;
+      if (valA > valB) return newAsc ? 1 : -1;
+      return 0;
+    });
+    setSortedData(sorted);
   };
 
   const exportCSV = () => {
@@ -156,6 +157,7 @@ export default function DynastyTable() {
         };
       });
       setData(imported);
+      setSortedData(imported);
     };
     reader.readAsText(file);
   };
