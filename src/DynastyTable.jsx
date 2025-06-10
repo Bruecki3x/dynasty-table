@@ -42,8 +42,6 @@ export default function DynastyTable() {
 
     if (field === "position" && isSpecial) {
       updated[index].birthday = "";
-      updated[index].lastValue = 0;
-      updated[index].currentValue = 0;
     }
 
     setData(updated);
@@ -251,7 +249,6 @@ export default function DynastyTable() {
                     value={player.lastValue}
                     onChange={(e) => handleChange(index, "lastValue", e.target.value)}
                     className="w-full"
-                    disabled={isSpecial}
                   />
                 </td>
                 <td>
@@ -260,7 +257,6 @@ export default function DynastyTable() {
                     value={player.currentValue}
                     onChange={(e) => handleChange(index, "currentValue", e.target.value)}
                     className="w-full"
-                    disabled={isSpecial}
                   />
                 </td>
                 <td className="text-center">{isSpecial ? 0 : trend}</td>
