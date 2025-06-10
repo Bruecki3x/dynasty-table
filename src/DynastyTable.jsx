@@ -38,9 +38,9 @@ export default function DynastyTable() {
         ? Number(value)
         : value;
 
-    const isDEForPICK = updated[index].position === "DEF" || updated[index].position === "PICK";
+    const isSpecial = updated[index].position === "DEF" || updated[index].position === "PICK";
 
-    if (field === "position" && isDEForPICK) {
+    if (field === "position" && isSpecial) {
       updated[index].birthday = "";
       updated[index].lastValue = 0;
       updated[index].currentValue = 0;
@@ -107,6 +107,53 @@ export default function DynastyTable() {
     if (valA > valB) return sortAsc ? 1 : -1;
     return 0;
   });
+
+  const exportCSV = () => {
+    const header = ["Position", "Name", "Geburtstag", "Vormonat", "Aktuell"];
+    const rows = data.map((p) => [
+      p.position,
+      p.name,
+      p.birthday,
+      p.lastValue,
+      p.currentValue,
+    ]);
+    const csv = [header, ...rows].map((r) => r.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "dynasty_export.csv";
+    a.click();
+  };
+
+  const importCSV = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target.result;
+      const lines = text.split("\n").slice(1);
+      const imported = lines.map((line) => {
+        const [position, name, birthday, lastValue, currentValue] = line.split(",");
+        return {
+          position,
+          name,
+          birthday,
+          lastValue: Number(lastValue),
+          currentValue: Number(currentValue),
+        };
+      });
+      setData(imported);
+    };
+    reader.readAsText(file);
+  };
+
+  const renderArrow = (key) => {
+    if (sortKey !== key) return "";
+    return sortAsc ? "▲" : "▼";
+  };
+
   return (
     <div className="p-4">
       <h2 className="text-2xl font-bold mb-2">🏈 Dynasty-Trade-Value</h2>
