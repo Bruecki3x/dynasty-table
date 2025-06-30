@@ -58,10 +58,6 @@ export default function DynastyTable() {
       }
     } else if (field === "lastValue" || field === "currentValue") {
       newData[index][field] = Number(value);
-    } else if (field === "birthday") {
-      if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-        newData[index][field] = value;
-      }
     } else {
       newData[index][field] = value;
     }
