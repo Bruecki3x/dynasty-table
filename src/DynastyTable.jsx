@@ -103,7 +103,7 @@ const DynastyTable = () => {
         </thead>
         <tbody>
           {players.map((player, index) => {
-            const isDisabled = ["DEF", "PICK"].includes(player.position);
+            const isDisabled = player.position === "DEF" || player.position === "PICK";
             const delta =
               parseFloat(player.current) - parseFloat(player.previous) || 0;
             return (
