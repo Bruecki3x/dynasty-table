@@ -15,12 +15,11 @@ const DynastyTable = () => {
   }, [players]);
 
   const updatePlayer = (index, field, value) => {
-    console.log(`updatePlayer called: ${index}, ${field}, ${value}`);
     const updated = [...players];
     const updatedPlayer = { ...updated[index] };
 
     if (field === "birthday") {
-      // Speichere das Datum als String im Format yyyy-mm-dd
+      // Speichere das Datum direkt als String im yyyy-mm-dd Format
       updatedPlayer.birthday = value;
       if (value) {
         const birthDate = new Date(value);
@@ -116,7 +115,7 @@ const DynastyTable = () => {
             const delta =
               parseFloat(player.current) - parseFloat(player.previous) || 0;
 
-            // Stelle sicher, dass Geburtstag leer ist, wenn kein valides Datum
+            // Nur wenn birthday ein String mit genau 10 Zeichen ist (YYYY-MM-DD), ansonsten leer
             const birthdayValue =
               player.birthday && player.birthday.length === 10
                 ? player.birthday
