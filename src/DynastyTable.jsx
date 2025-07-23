@@ -15,23 +15,26 @@ const DynastyTable = () => {
   }, [players]);
 
   const updatePlayer = (index, field, value) => {
-    console.log(`Update player at index ${index}, field: ${field}, value: ${value}`);
-
+    console.log(`updatePlayer called: ${index}, ${field}, ${value}`);
     const updated = [...players];
-    const updatedPlayer = { ...updated[index], [field]: value };
+    const updatedPlayer = { ...updated[index] };
 
     if (field === "birthday") {
-      // Hier sicherstellen, dass das Datum im yyyy-mm-dd Format gespeichert wird
+      // Speichere das Datum als String im Format yyyy-mm-dd
       updatedPlayer.birthday = value;
-
-      const birthDate = new Date(value);
-      const ageDifMs = Date.now() - birthDate.getTime();
-      const ageDate = new Date(ageDifMs);
-      const age = Math.abs(ageDate.getUTCFullYear() - 1970);
-      updatedPlayer.age = isNaN(age) ? "" : age;
+      if (value) {
+        const birthDate = new Date(value);
+        const ageDifMs = Date.now() - birthDate.getTime();
+        const ageDate = new Date(ageDifMs);
+        const age = Math.abs(ageDate.getUTCFullYear() - 1970);
+        updatedPlayer.age = isNaN(age) ? "" : age;
+      } else {
+        updatedPlayer.age = "";
+      }
+    } else {
+      updatedPlayer[field] = value;
     }
 
-    // Wenn Position geändert wird und "DEF" oder "PICK" ist, Geburtstag & Alter leeren
     if (field === "position" && ["DEF", "PICK"].includes(value)) {
       updatedPlayer.birthday = "";
       updatedPlayer.age = "";
@@ -112,6 +115,13 @@ const DynastyTable = () => {
             const isDisabled = ["DEF", "PICK"].includes(player.position);
             const delta =
               parseFloat(player.current) - parseFloat(player.previous) || 0;
+
+            // Stelle sicher, dass Geburtstag leer ist, wenn kein valides Datum
+            const birthdayValue =
+              player.birthday && player.birthday.length === 10
+                ? player.birthday
+                : "";
+
             return (
               <tr key={player.id} className="text-center border-t">
                 <td>{index + 1}</td>
@@ -143,7 +153,7 @@ const DynastyTable = () => {
                 <td>
                   <input
                     type="date"
-                    value={player.birthday}
+                    value={birthdayValue}
                     onChange={(e) =>
                       updatePlayer(index, "birthday", e.target.value)
                     }
