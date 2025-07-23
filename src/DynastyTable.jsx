@@ -15,36 +15,30 @@ const DynastyTable = () => {
   }, [players]);
 
   const updatePlayer = (index, field, value) => {
-    setPlayers(prev => {
-      const updated = [...prev];
-      const player = { ...updated[index] };
+    const updated = [...players];
+    const updatedPlayer = { ...updated[index], [field]: value };
 
-      player[field] = value;
+    if (field === "birthday") {
+      const birthDate = new Date(value);
+      const ageDifMs = Date.now() - birthDate.getTime();
+      const ageDate = new Date(ageDifMs);
+      const age = Math.abs(ageDate.getUTCFullYear() - 1970);
+      updatedPlayer.age = isNaN(age) ? "" : age;
+    }
 
-      // Alter berechnen, wenn Geburtstag geändert wird
-      if (field === "birthday") {
-        const birthDate = new Date(value);
-        const ageDifMs = Date.now() - birthDate.getTime();
-        const ageDate = new Date(ageDifMs);
-        const age = Math.abs(ageDate.getUTCFullYear() - 1970);
-        player.age = isNaN(age) ? "" : age;
-      }
+    if (field === "position" && ["DEF", "PICK"].includes(value)) {
+      updatedPlayer.birthday = "";
+      updatedPlayer.age = "";
+    }
 
-      // Wenn Position DEF oder PICK, Geburtstag und Alter leeren
-      if (field === "position" && ["DEF", "PICK"].includes(value)) {
-        player.birthday = "";
-        player.age = "";
-      }
-
-      updated[index] = player;
-      return updated;
-    });
+    updated[index] = updatedPlayer;
+    setPlayers(updated);
   };
 
   const addPlayer = () => {
     if (players.length >= 40) return;
-    setPlayers(prev => [
-      ...prev,
+    setPlayers([
+      ...players,
       {
         id: Date.now(),
         position: "",
@@ -58,11 +52,9 @@ const DynastyTable = () => {
   };
 
   const removePlayer = (index) => {
-    setPlayers(prev => {
-      const updated = [...prev];
-      updated.splice(index, 1);
-      return updated;
-    });
+    const updated = [...players];
+    updated.splice(index, 1);
+    setPlayers(updated);
   };
 
   const getPositionCount = (pos) =>
