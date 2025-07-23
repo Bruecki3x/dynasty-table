@@ -15,19 +15,20 @@ const DynastyTable = () => {
   }, [players]);
 
   const updatePlayer = (index, field, value) => {
+    console.log(`Update Spieler ${index}, Feld ${field}, Wert:`, value); // Debug Ausgabe
+
     const updated = [...players];
     const updatedPlayer = { ...updated[index], [field]: value };
 
-    // Alter berechnen, wenn Geburtstag geändert wird
     if (field === "birthday") {
       const birthDate = new Date(value);
       const ageDifMs = Date.now() - birthDate.getTime();
       const ageDate = new Date(ageDifMs);
       const age = Math.abs(ageDate.getUTCFullYear() - 1970);
       updatedPlayer.age = isNaN(age) ? "" : age;
+      console.log(`Neues Alter berechnet: ${updatedPlayer.age}`); // Debug Ausgabe
     }
 
-    // Wenn Position geändert wird und "DEF" oder "PICK" ist, Geburtstag & Alter leeren
     if (field === "position" && ["DEF", "PICK"].includes(value)) {
       updatedPlayer.birthday = "";
       updatedPlayer.age = "";
