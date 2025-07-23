@@ -15,11 +15,15 @@ const DynastyTable = () => {
   }, [players]);
 
   const updatePlayer = (index, field, value) => {
-    console.log("updatePlayer called:", index, field, value); // Debug-Ausgabe
+    console.log(`Update player at index ${index}, field: ${field}, value: ${value}`);
+
     const updated = [...players];
     const updatedPlayer = { ...updated[index], [field]: value };
 
     if (field === "birthday") {
+      // Hier sicherstellen, dass das Datum im yyyy-mm-dd Format gespeichert wird
+      updatedPlayer.birthday = value;
+
       const birthDate = new Date(value);
       const ageDifMs = Date.now() - birthDate.getTime();
       const ageDate = new Date(ageDifMs);
@@ -27,6 +31,7 @@ const DynastyTable = () => {
       updatedPlayer.age = isNaN(age) ? "" : age;
     }
 
+    // Wenn Position geändert wird und "DEF" oder "PICK" ist, Geburtstag & Alter leeren
     if (field === "position" && ["DEF", "PICK"].includes(value)) {
       updatedPlayer.birthday = "";
       updatedPlayer.age = "";
