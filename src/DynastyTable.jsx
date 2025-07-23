@@ -15,7 +15,6 @@ const DynastyTable = () => {
   }, [players]);
 
   const updatePlayer = (index, field, value) => {
-    console.log("updatePlayer called", index, field, value);
     const updated = [...players];
     const updatedPlayer = { ...updated[index], [field]: value };
 
@@ -27,6 +26,7 @@ const DynastyTable = () => {
       updatedPlayer.age = isNaN(age) ? "" : age;
     }
 
+    // Wenn Position "DEF" oder "PICK", Geburtstag und Alter löschen
     if (field === "position" && ["DEF", "PICK"].includes(value)) {
       updatedPlayer.birthday = "";
       updatedPlayer.age = "";
@@ -104,7 +104,7 @@ const DynastyTable = () => {
         </thead>
         <tbody>
           {players.map((player, index) => {
-            const isDisabled = player.position === "DEF" || player.position === "PICK";
+            const isDisabled = ["DEF", "PICK"].includes(player.position);
             const delta =
               parseFloat(player.current) - parseFloat(player.previous) || 0;
             return (
