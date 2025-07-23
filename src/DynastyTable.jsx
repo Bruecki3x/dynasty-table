@@ -15,25 +15,19 @@ const DynastyTable = () => {
   }, [players]);
 
   const updatePlayer = (index, field, value) => {
-    console.log(`updatePlayer called: index=${index}, field=${field}, value=${value}`);
     const updated = [...players];
-    const updatedPlayer = { ...updated[index] };
+    const updatedPlayer = { ...updated[index], [field]: value };
 
+    // Alter berechnen, wenn Geburtstag geändert wird
     if (field === "birthday") {
-      updatedPlayer.birthday = value;
-      if (value) {
-        const birthDate = new Date(value);
-        const ageDifMs = Date.now() - birthDate.getTime();
-        const ageDate = new Date(ageDifMs);
-        const age = Math.abs(ageDate.getUTCFullYear() - 1970);
-        updatedPlayer.age = isNaN(age) ? "" : age;
-      } else {
-        updatedPlayer.age = "";
-      }
-    } else {
-      updatedPlayer[field] = value;
+      const birthDate = new Date(value);
+      const ageDifMs = Date.now() - birthDate.getTime();
+      const ageDate = new Date(ageDifMs);
+      const age = Math.abs(ageDate.getUTCFullYear() - 1970);
+      updatedPlayer.age = isNaN(age) ? "" : age;
     }
 
+    // Wenn Position geändert wird und "DEF" oder "PICK" ist, Geburtstag & Alter leeren
     if (field === "position" && ["DEF", "PICK"].includes(value)) {
       updatedPlayer.birthday = "";
       updatedPlayer.age = "";
@@ -114,12 +108,6 @@ const DynastyTable = () => {
             const isDisabled = ["DEF", "PICK"].includes(player.position);
             const delta =
               parseFloat(player.current) - parseFloat(player.previous) || 0;
-
-            const birthdayValue =
-              player.birthday && player.birthday.length === 10
-                ? player.birthday
-                : "";
-
             return (
               <tr key={player.id} className="text-center border-t">
                 <td>{index + 1}</td>
@@ -151,7 +139,7 @@ const DynastyTable = () => {
                 <td>
                   <input
                     type="date"
-                    value={birthdayValue}
+                    value={player.birthday}
                     onChange={(e) =>
                       updatePlayer(index, "birthday", e.target.value)
                     }
