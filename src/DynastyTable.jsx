@@ -15,6 +15,7 @@ const DynastyTable = () => {
   }, [players]);
 
   const updatePlayer = (index, field, value) => {
+    console.log("updatePlayer called:", index, field, value); // Debug-Ausgabe
     const updated = [...players];
     const updatedPlayer = { ...updated[index], [field]: value };
 
@@ -26,7 +27,6 @@ const DynastyTable = () => {
       updatedPlayer.age = isNaN(age) ? "" : age;
     }
 
-    // Wenn Position "DEF" oder "PICK", Geburtstag und Alter löschen
     if (field === "position" && ["DEF", "PICK"].includes(value)) {
       updatedPlayer.birthday = "";
       updatedPlayer.age = "";
