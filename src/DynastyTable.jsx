@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from "react";
 
+const initialPlayers = [];
+
 const positions = ["QB", "RB", "WR", "TE", "K", "DEF", "PICK"];
 
 const DynastyTable = () => {
   const [players, setPlayers] = useState(() => {
     const saved = localStorage.getItem("dynastyPlayers");
-    return saved ? JSON.parse(saved) : [];
+    return saved ? JSON.parse(saved) : initialPlayers;
   });
 
   useEffect(() => {
@@ -13,30 +15,36 @@ const DynastyTable = () => {
   }, [players]);
 
   const updatePlayer = (index, field, value) => {
-    const updated = [...players];
-    const updatedPlayer = { ...updated[index], [field]: value };
+    setPlayers(prev => {
+      const updated = [...prev];
+      const player = { ...updated[index] };
 
-    if (field === "birthday") {
-      const birthDate = new Date(value);
-      const ageDifMs = Date.now() - birthDate.getTime();
-      const ageDate = new Date(ageDifMs);
-      const age = Math.abs(ageDate.getUTCFullYear() - 1970);
-      updatedPlayer.age = isNaN(age) ? "" : age;
-    }
+      player[field] = value;
 
-    if (field === "position" && ["DEF", "PICK"].includes(value)) {
-      updatedPlayer.birthday = "";
-      updatedPlayer.age = "";
-    }
+      // Alter berechnen, wenn Geburtstag geändert wird
+      if (field === "birthday") {
+        const birthDate = new Date(value);
+        const ageDifMs = Date.now() - birthDate.getTime();
+        const ageDate = new Date(ageDifMs);
+        const age = Math.abs(ageDate.getUTCFullYear() - 1970);
+        player.age = isNaN(age) ? "" : age;
+      }
 
-    updated[index] = updatedPlayer;
-    setPlayers(updated);
+      // Wenn Position DEF oder PICK, Geburtstag und Alter leeren
+      if (field === "position" && ["DEF", "PICK"].includes(value)) {
+        player.birthday = "";
+        player.age = "";
+      }
+
+      updated[index] = player;
+      return updated;
+    });
   };
 
   const addPlayer = () => {
     if (players.length >= 40) return;
-    setPlayers([
-      ...players,
+    setPlayers(prev => [
+      ...prev,
       {
         id: Date.now(),
         position: "",
@@ -50,9 +58,11 @@ const DynastyTable = () => {
   };
 
   const removePlayer = (index) => {
-    const updated = [...players];
-    updated.splice(index, 1);
-    setPlayers(updated);
+    setPlayers(prev => {
+      const updated = [...prev];
+      updated.splice(index, 1);
+      return updated;
+    });
   };
 
   const getPositionCount = (pos) =>
@@ -101,7 +111,7 @@ const DynastyTable = () => {
         </thead>
         <tbody>
           {players.map((player, index) => {
-            const isDisabled = player.position === "DEF" || player.position === "PICK";
+            const isDisabled = ["DEF", "PICK"].includes(player.position);
             const delta =
               parseFloat(player.current) - parseFloat(player.previous) || 0;
             return (
