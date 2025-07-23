@@ -202,3 +202,4 @@ const DynastyTable = () => {
 };
 
 export default DynastyTable;
+ 
