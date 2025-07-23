@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from "react";
 
-const initialPlayers = [];
-
 const positions = ["QB", "RB", "WR", "TE", "K", "DEF", "PICK"];
 
 const DynastyTable = () => {
   const [players, setPlayers] = useState(() => {
     const saved = localStorage.getItem("dynastyPlayers");
-    return saved ? JSON.parse(saved) : initialPlayers;
+    return saved ? JSON.parse(saved) : [];
   });
 
   useEffect(() => {
@@ -26,7 +24,6 @@ const DynastyTable = () => {
       updatedPlayer.age = isNaN(age) ? "" : age;
     }
 
-    // Wenn Position geändert wird und "DEF" oder "PICK" ist, Geburtstag & Alter leeren
     if (field === "position" && ["DEF", "PICK"].includes(value)) {
       updatedPlayer.birthday = "";
       updatedPlayer.age = "";
@@ -104,7 +101,7 @@ const DynastyTable = () => {
         </thead>
         <tbody>
           {players.map((player, index) => {
-            const isDisabled = ["DEF", "PICK"].includes(player.position);
+            const isDisabled = player.position === "DEF" || player.position === "PICK";
             const delta =
               parseFloat(player.current) - parseFloat(player.previous) || 0;
             return (
